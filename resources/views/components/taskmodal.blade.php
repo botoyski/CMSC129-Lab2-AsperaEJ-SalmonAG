@@ -1,0 +1,79 @@
+<div
+    x-show="isModalOpen"
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+    @keydown.escape.window="closeModal()"
+>
+    <div x-show="isModalOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
+        <h2 class="mb-4 text-xl font-semibold text-zinc-100" x-text="editingTaskId ? 'Edit Task' : 'Add New Task'"></h2>
+
+        <form @submit.prevent="submitTask()" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-zinc-300">Title</label>
+                <input
+                    type="text"
+                    x-model="form.title"
+                    class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    required
+                >
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-zinc-300">Description</label>
+                <textarea
+                    x-model="form.description"
+                    class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    rows="3"
+                ></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300">Priority</label>
+                    <select
+                        x-model="form.priority"
+                        class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    >
+                        <option>High</option>
+                        <option>Medium</option>
+                        <option>Low</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300">Due Date</label>
+                    <input
+                        type="date"
+                        x-model="form.dueDate"
+                        class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300">Due Time</label>
+                    <input
+                        type="time"
+                        x-model="form.dueTime"
+                        class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    >
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end gap-2">
+                <button
+                    type="button"
+                    @click="closeModal()"
+                    class="rounded-md bg-zinc-800 px-4 py-2 text-zinc-200 transition hover:bg-zinc-700"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="rounded-md bg-sky-500 px-4 py-2 text-zinc-950 transition hover:bg-sky-400"
+                    x-text="editingTaskId ? 'Save Task' : 'Add Task'"
+                ></button>
+            </div>
+        </form>
+    </div>
+</div>
