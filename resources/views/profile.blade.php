@@ -77,6 +77,7 @@
                 <div class="mb-6">
                     <h2 class="text-xl font-semibold text-zinc-100">Edit Profile</h2>
                     <p class="mt-1 text-sm text-zinc-400">Update your editable profile details below.</p>
+                    <p class="mt-1 text-xs text-zinc-400"><span class="font-semibold text-red-400">*</span> Required fields</p>
                 </div>
 
                 <form method="POST" action="{{ route('profile.update') }}" class="space-y-4">
@@ -84,7 +85,7 @@
                     @method('PATCH')
 
                     <div>
-                        <label for="name" class="block text-sm font-medium text-zinc-300">Name</label>
+                        <label for="name" class="block text-sm font-medium text-zinc-300">Name <span class="text-red-400">*</span></label>
                         <input
                             id="name"
                             name="name"
@@ -99,7 +100,7 @@
                     </div>
 
                     <div>
-                        <label for="email" class="block text-sm font-medium text-zinc-300">Email address</label>
+                        <label for="email" class="block text-sm font-medium text-zinc-300">Email address <span class="text-red-400">*</span></label>
                         <input
                             id="email"
                             name="email"

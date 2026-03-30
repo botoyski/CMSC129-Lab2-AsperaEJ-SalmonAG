@@ -7,10 +7,11 @@
 >
     <div x-cloak x-show="isModalOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
         <h2 class="mb-4 text-xl font-semibold text-zinc-100" x-text="editingTaskId ? 'Edit Task' : 'Add New Task'"></h2>
+        <p class="mb-2 text-xs text-zinc-400"><span class="font-semibold text-red-400">*</span> Required fields</p>
 
         <form @submit.prevent="submitTask()" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-zinc-300">Title</label>
+                <label class="block text-sm font-medium text-zinc-300">Title <span class="text-red-400">*</span></label>
                 <input
                     type="text"
                     x-model="form.title"
@@ -59,7 +60,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-zinc-300">Due Date</label>
+                    <label class="block text-sm font-medium text-zinc-300">Due Date <span class="text-red-400">*</span></label>
                     <input
                         type="date"
                         x-model="form.dueDate"
