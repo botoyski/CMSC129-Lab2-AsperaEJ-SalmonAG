@@ -143,22 +143,40 @@
         <script>
             document.addEventListener('alpine:init', () => {
                 Alpine.store('tasksApp', {
-                    storageKey: 'dashboard_tasks_v1',
                     hasInitialized: false,
                     sidebarOpen: false,
                     tasks: [],
+                    categories: [],
                     statuses: ['Not Started', 'In Progress', 'Completed'],
                     descriptionMaxLength: 100,
                     searchValue: '',
+                    searchDebounceId: null,
                     filterStatus: 'All',
                     filterPriority: 'All',
+                    filterCategoryId: 'All',
                     showArchived: false,
                     viewMode: 'list',
+                    isLoading: false,
+                    pagination: {
+                        currentPage: 1,
+                        lastPage: 1,
+                        perPage: 9,
+                        total: 0,
+                    },
+                    counts: {
+                        all: 0,
+                        not_started: 0,
+                        in_progress: 0,
+                        completed: 0,
+                        archived: 0,
+                        added_today: 0,
+                    },
                     isModalOpen: false,
                     isArchiveConfirmOpen: false,
                     archiveTaskId: null,
                     isDeleteConfirmOpen: false,
                     deleteTaskId: null,
+                    formErrors: {},
                     toastMessage: '',
                     toastVisible: false,
                     toastTimeoutId: null,
@@ -166,132 +184,90 @@
                     form: {
                         title: '',
                         description: '',
+                        status: 'Not Started',
                         priority: 'Medium',
                         dueDate: '',
                         dueTime: '',
+                        categoryId: '',
                     },
 
                     init() {
                         if (this.hasInitialized) {
                             return;
                         }
-
-                        const fromStorage = localStorage.getItem(this.storageKey);
-
-                        if (fromStorage) {
-                            try {
-                                const parsed = JSON.parse(fromStorage);
-                                this.tasks = this.normalizeTasks(Array.isArray(parsed) ? parsed : []);
-                            } catch (error) {
-                                this.tasks = [];
-                            }
-
-                            this.saveTasks();
-                            this.hasInitialized = true;
-                            return;
-                        }
-
-                        this.tasks = [
-                            {
-                                id: Date.now() + 1,
-                                createdAt: '2026-03-27T09:00:00.000Z',
-                                title: 'Finalize dashboard layout',
-                                description: 'Build the initial responsive dashboard structure and align visual hierarchy.',
-                                priority: 'High',
-                                status: 'Not Started',
-                                dueDate: '2026-04-02',
-                                dueTime: '09:00',
-                                archived: false,
-                            },
-                            {
-                                id: Date.now() + 2,
-                                createdAt: '2026-03-28T13:30:00.000Z',
-                                title: 'Connect API integration',
-                                description: 'Wire task endpoints and map response states into UI-ready collections.',
-                                priority: 'Medium',
-                                status: 'In Progress',
-                                dueDate: '2026-04-04',
-                                dueTime: '13:30',
-                                archived: false,
-                            },
-                            {
-                                id: Date.now() + 3,
-                                createdAt: '2026-03-29T10:15:00.000Z',
-                                title: 'Polish profile view',
-                                description: 'Refine spacing, typography, and actions for the profile page experience.',
-                                priority: 'Low',
-                                status: 'Completed',
-                                dueDate: '2026-03-30',
-                                dueTime: '',
-                                archived: false,
-                            },
-                        ];
-
-                        this.saveTasks();
                         this.hasInitialized = true;
+                        this.fetchTasks(1);
                     },
 
-                    normalizeStatus(status) {
-                        const statusMap = {
-                            'not started': 'Not Started',
-                            'in progress': 'In Progress',
-                            completed: 'Completed',
+                    csrfToken() {
+                        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    },
+
+                    buildHeaders(extra = {}) {
+                        return {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...extra,
                         };
-
-                        const normalized = statusMap[String(status || '').trim().toLowerCase()] || 'Not Started';
-
-                        return this.statuses.includes(normalized) ? normalized : 'Not Started';
                     },
 
-                    sanitizeDescription(value) {
-                        return String(value || '').trim().slice(0, this.descriptionMaxLength);
+                    buildQueryParams(page = 1) {
+                        const params = new URLSearchParams({
+                            page: String(page),
+                            search: this.searchValue,
+                            status: this.filterStatus,
+                            priority: this.filterPriority,
+                            view: this.showArchived ? 'trash' : 'active',
+                            per_page: String(this.pagination.perPage),
+                        });
+
+                        if (this.filterCategoryId !== 'All') {
+                            params.set('category_id', this.filterCategoryId);
+                        }
+
+                        return params;
                     },
 
-                    resolveCreatedAt(task) {
-                        if (task?.createdAt) {
-                            return task.createdAt;
-                        }
+                    async fetchTasks(page = 1) {
+                        this.isLoading = true;
 
-                        if (task?.created_at) {
-                            return task.created_at;
-                        }
+                        try {
+                            const response = await fetch(`/tasks?${this.buildQueryParams(page).toString()}`, {
+                                headers: this.buildHeaders(),
+                            });
 
-                        const rawId = String(task?.id ?? '').trim();
-
-                        if (/^\d{13}$/.test(rawId)) {
-                            return new Date(Number(rawId)).toISOString();
-                        }
-
-                        return null;
-                    },
-
-                    normalizeTasks(taskList) {
-                        const seenIds = new Set();
-
-                        return taskList.map((task, index) => {
-                            const rawId = task.id ?? task._id;
-                            const candidateId = String(rawId ?? '').trim();
-                            const hasValidId = candidateId !== '';
-                            let resolvedId = hasValidId ? candidateId : `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
-
-                            if (seenIds.has(resolvedId)) {
-                                resolvedId = `${resolvedId}-${index}-${Math.random().toString(36).slice(2, 6)}`;
+                            if (!response.ok) {
+                                throw new Error('Could not fetch tasks.');
                             }
 
-                            seenIds.add(resolvedId);
-
-                            return {
-                                ...task,
-                                id: resolvedId,
-                                archived: Boolean(task.archived),
-                                priority: task.priority || 'Medium',
-                                status: this.normalizeStatus(task.status),
-                                description: this.sanitizeDescription(task.description),
-                                dueDate: task.dueDate || '',
-                                dueTime: task.dueTime || '',
-                                createdAt: this.resolveCreatedAt(task),
+                            const payload = await response.json();
+                            this.tasks = Array.isArray(payload.data) ? payload.data : [];
+                            this.categories = Array.isArray(payload.categories) ? payload.categories : [];
+                            this.pagination = {
+                                currentPage: Number(payload.pagination?.current_page || 1),
+                                lastPage: Number(payload.pagination?.last_page || 1),
+                                perPage: Number(payload.pagination?.per_page || 9),
+                                total: Number(payload.pagination?.total || 0),
                             };
-                        });
+                            this.counts = {
+                                ...this.counts,
+                                ...(payload.counts || {}),
+                            };
+                        } catch (error) {
+                            this.showToast('Unable to load tasks right now.');
+                        } finally {
+                            this.isLoading = false;
+                        }
+                    },
+
+                    queueSearch() {
+                        if (this.searchDebounceId) {
+                            clearTimeout(this.searchDebounceId);
+                        }
+
+                        this.searchDebounceId = setTimeout(() => {
+                            this.fetchTasks(1);
+                        }, 300);
                     },
 
                     resolveTaskId(task) {
@@ -304,11 +280,6 @@
                         return this.tasks.find((item) => String(this.resolveTaskId(item)) === targetId) || null;
                     },
 
-                    saveTasks() {
-                        this.tasks = this.normalizeTasks(this.tasks);
-                        localStorage.setItem(this.storageKey, JSON.stringify(this.tasks));
-                    },
-
                     toggleSidebar() {
                         this.sidebarOpen = !this.sidebarOpen;
                     },
@@ -318,7 +289,7 @@
                     },
 
                     setFilterStatus(val) {
-                        this.filterPriority = 'All';
+                        this.filterCategoryId = 'All';
 
                         if (val === 'Archived') {
                             this.showArchived = true;
@@ -328,6 +299,7 @@
                             this.filterStatus = val;
                         }
 
+                        this.fetchTasks(1);
                         this.closeSidebar();
                     },
 
@@ -335,76 +307,84 @@
                         this.filterPriority = val;
                         this.filterStatus = 'All';
                         this.showArchived = false;
+                        this.fetchTasks(1);
                         this.closeSidebar();
                     },
 
-                    get activeTasks() {
-                        return this.tasks.filter((task) => !task.archived);
+                    setFilterCategory(val) {
+                        this.filterCategoryId = val;
+                        this.showArchived = false;
+                        this.fetchTasks(1);
                     },
 
-                    get archivedTasks() {
-                        return this.tasks.filter((task) => task.archived);
+                    toggleArchived() {
+                        this.showArchived = !this.showArchived;
+                        this.fetchTasks(1);
                     },
 
                     get allCount() {
-                        return this.activeTasks.length;
+                        return this.counts.all;
                     },
 
                     get addedTodayCount() {
-                        const todayKey = new Date().toISOString().slice(0, 10);
-
-                        return this.activeTasks.filter((task) => {
-                            if (!task.createdAt) {
-                                return false;
-                            }
-
-                            return String(task.createdAt).slice(0, 10) === todayKey;
-                        }).length;
+                        return this.counts.added_today;
                     },
 
                     get notStartedCount() {
-                        return this.activeTasks.filter((task) => task.status === 'Not Started').length;
+                        return this.counts.not_started;
                     },
 
                     get inProgressCount() {
-                        return this.activeTasks.filter((task) => task.status === 'In Progress').length;
+                        return this.counts.in_progress;
                     },
 
                     get completedCount() {
-                        return this.activeTasks.filter((task) => task.status === 'Completed').length;
+                        return this.counts.completed;
                     },
 
                     get archivedCount() {
-                        return this.archivedTasks.length;
-                    },
-
-                    get filteredActiveTasks() {
-                        return this.activeTasks.filter((task) => {
-                            const search = this.searchValue.toLowerCase();
-                            const matchesSearch = task.title.toLowerCase().includes(search) || task.description.toLowerCase().includes(search);
-                            const matchesStatus = this.filterStatus === 'All' || task.status === this.filterStatus;
-                            const matchesPriority = this.filterPriority === 'All' || task.priority === this.filterPriority;
-
-                            return matchesSearch && matchesStatus && matchesPriority;
-                        });
+                        return this.counts.archived;
                     },
 
                     get displayTasks() {
-                        return this.showArchived ? this.archivedTasks : this.filteredActiveTasks;
+                        return this.tasks;
                     },
 
                     countByStatus(status) {
-                        return this.activeTasks.filter((task) => task.status === status).length;
+                        if (status === 'Not Started') {
+                            return this.notStartedCount;
+                        }
+
+                        if (status === 'In Progress') {
+                            return this.inProgressCount;
+                        }
+
+                        if (status === 'Completed') {
+                            return this.completedCount;
+                        }
+
+                        return 0;
+                    },
+
+                    goToPage(page) {
+                        if (page < 1 || page > this.pagination.lastPage || this.isLoading) {
+                            return;
+                        }
+
+                        this.fetchTasks(page);
                     },
 
                     addTask() {
                         this.editingTaskId = null;
+                        this.formErrors = {};
                         this.form = {
                             title: '',
                             description: '',
+                            status: 'Not Started',
                             priority: 'Medium',
                             dueDate: '',
                             dueTime: '',
+                            categoryId: '',
                         };
                         this.isModalOpen = true;
                     },
@@ -417,13 +397,16 @@
                             return;
                         }
 
+                        this.formErrors = {};
                         this.editingTaskId = task.id;
                         this.form = {
                             title: task.title || '',
-                            description: this.sanitizeDescription(task.description),
+                            description: String(task.description || '').slice(0, this.descriptionMaxLength),
+                            status: task.status || 'Not Started',
                             priority: task.priority || 'Medium',
                             dueDate: task.dueDate || '',
                             dueTime: task.dueTime || '',
+                            categoryId: task.categoryId ? String(task.categoryId) : '',
                         };
                         this.isModalOpen = true;
                     },
@@ -431,6 +414,7 @@
                     closeModal() {
                         this.isModalOpen = false;
                         this.editingTaskId = null;
+                        this.formErrors = {};
                     },
 
                     showToast(message) {
@@ -461,50 +445,75 @@
                         this.deleteTaskId = null;
                     },
 
-                    confirmDeleteTask() {
+                    async confirmDeleteTask() {
                         if (!this.deleteTaskId) {
                             return;
                         }
 
-                        this.deleteTask(this.deleteTaskId);
+                        await this.deleteTask(this.deleteTaskId);
                         this.cancelDeleteTask();
-                        this.showToast('Task successfully deleted');
                     },
 
-                    submitTask() {
+                    collectFormErrors(errorBag) {
+                        const reduced = {};
+
+                        Object.entries(errorBag || {}).forEach(([field, messages]) => {
+                            reduced[field] = Array.isArray(messages) ? messages[0] : String(messages);
+                        });
+
+                        return reduced;
+                    },
+
+                    buildTaskPayload(statusOverride = null) {
+                        return {
+                            title: this.form.title.trim(),
+                            description: this.form.description,
+                            status: statusOverride || this.form.status,
+                            priority: this.form.priority,
+                            due_date: this.form.dueDate,
+                            due_time: this.form.dueTime || null,
+                            category_id: this.form.categoryId ? Number(this.form.categoryId) : null,
+                        };
+                    },
+
+                    async submitTask() {
+                        this.formErrors = {};
+
                         if (!this.form.title || !this.form.dueDate) {
+                            this.formErrors = {
+                                title: !this.form.title ? 'A task title is required.' : '',
+                                due_date: !this.form.dueDate ? 'Please set a due date.' : '',
+                            };
                             return;
                         }
 
-                        if (this.editingTaskId) {
-                            const targetId = String(this.editingTaskId);
-                            const task = this.tasks.find((item) => String(this.resolveTaskId(item)) === targetId);
+                        try {
+                            const targetId = this.editingTaskId ? String(this.editingTaskId) : null;
+                            const response = await fetch(targetId ? `/tasks/${targetId}` : '/tasks', {
+                                method: targetId ? 'PUT' : 'POST',
+                                headers: this.buildHeaders({
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                }),
+                                body: JSON.stringify(this.buildTaskPayload()),
+                            });
 
-                            if (!task) {
+                            if (response.status === 422) {
+                                const payload = await response.json();
+                                this.formErrors = this.collectFormErrors(payload.errors);
                                 return;
                             }
 
-                            task.title = this.form.title.trim();
-                            task.description = this.sanitizeDescription(this.form.description);
-                            task.priority = this.form.priority;
-                            task.dueDate = this.form.dueDate;
-                            task.dueTime = this.form.dueTime;
-                        } else {
-                            this.tasks.unshift({
-                                id: Date.now(),
-                                createdAt: new Date().toISOString(),
-                                title: this.form.title.trim(),
-                                description: this.sanitizeDescription(this.form.description),
-                                priority: this.form.priority,
-                                status: 'Not Started',
-                                dueDate: this.form.dueDate,
-                                dueTime: this.form.dueTime,
-                                archived: false,
-                            });
-                        }
+                            if (!response.ok) {
+                                throw new Error('Could not save task.');
+                            }
 
-                        this.saveTasks();
-                        this.closeModal();
+                            await this.fetchTasks(1);
+                            this.closeModal();
+                            this.showToast(targetId ? 'Task successfully updated' : 'Task successfully created');
+                        } catch (error) {
+                            this.showToast('Unable to save this task right now.');
+                        }
                     },
 
                     requestArchiveTask(taskId) {
@@ -521,7 +530,7 @@
                         this.archiveTaskId = null;
                     },
 
-                    confirmArchiveTask() {
+                    async confirmArchiveTask() {
                         if (!this.archiveTaskId) {
                             return;
                         }
@@ -529,35 +538,73 @@
                         const task = this.getTaskById(this.archiveTaskId);
                         const wasArchived = Boolean(task?.archived);
 
-                        this.archiveTask(this.archiveTaskId);
+                        await this.archiveTask(this.archiveTaskId);
                         this.cancelArchiveTask();
                         this.showToast(wasArchived ? 'Task successfully restored' : 'Task successfully archived');
                     },
 
-                    archiveTask(taskId) {
+                    async archiveTask(taskId) {
                         const targetId = String(taskId);
 
-                        this.tasks = this.tasks.map((item) => {
-                            if (String(this.resolveTaskId(item)) !== targetId) {
-                                return item;
+                        const task = this.getTaskById(targetId);
+
+                        if (!task) {
+                            return;
+                        }
+
+                        try {
+                            const endpoint = task.archived ? `/tasks/${targetId}/restore` : `/tasks/${targetId}`;
+                            const method = task.archived ? 'PATCH' : 'DELETE';
+                            const response = await fetch(endpoint, {
+                                method,
+                                headers: this.buildHeaders({
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                }),
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Could not archive/restore task.');
                             }
 
-                            return {
-                                ...item,
-                                archived: !item.archived,
-                            };
-                        });
-
-                        this.saveTasks();
+                            await this.fetchTasks(this.pagination.currentPage);
+                        } catch (error) {
+                            this.showToast('Unable to update archive state right now.');
+                        }
                     },
 
-                    deleteTask(taskId) {
+                    async deleteTask(taskId) {
                         const targetId = String(taskId);
-                        this.tasks = this.tasks.filter((item) => String(this.resolveTaskId(item)) !== targetId);
-                        this.saveTasks();
+
+                        try {
+                            const endpoint = this.showArchived ? `/tasks/${targetId}/force` : `/tasks/${targetId}`;
+                            const response = await fetch(endpoint, {
+                                method: 'DELETE',
+                                headers: this.buildHeaders({
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                }),
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Could not delete task.');
+                            }
+
+                            if (this.showArchived) {
+                                this.showToast('Task permanently deleted');
+                            } else {
+                                this.showToast('Task moved to trash');
+                            }
+
+                            const requestedPage = this.tasks.length === 1 && this.pagination.currentPage > 1
+                                ? this.pagination.currentPage - 1
+                                : this.pagination.currentPage;
+
+                            await this.fetchTasks(requestedPage);
+                        } catch (error) {
+                            this.showToast('Unable to delete task right now.');
+                        }
                     },
 
-                    changeStatus(taskOrId, nextStatus) {
+                    async changeStatus(taskOrId, nextStatus) {
                         const targetId = typeof taskOrId === 'object'
                             ? this.resolveTaskId(taskOrId)
                             : taskOrId;
@@ -566,18 +613,38 @@
                             return;
                         }
 
-                        this.tasks = this.tasks.map((item) => {
-                            if (String(this.resolveTaskId(item)) !== String(targetId)) {
-                                return item;
+                        const task = this.getTaskById(targetId);
+
+                        if (!task || task.archived) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(`/tasks/${targetId}`, {
+                                method: 'PUT',
+                                headers: this.buildHeaders({
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                }),
+                                body: JSON.stringify({
+                                    title: task.title,
+                                    description: task.description,
+                                    status: nextStatus,
+                                    priority: task.priority,
+                                    due_date: task.dueDate,
+                                    due_time: task.dueTime || null,
+                                    category_id: task.categoryId || null,
+                                }),
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Could not update status.');
                             }
 
-                            return {
-                                ...item,
-                                status: nextStatus,
-                            };
-                        });
-
-                        this.saveTasks();
+                            await this.fetchTasks(this.pagination.currentPage);
+                        } catch (error) {
+                            this.showToast('Unable to update task status.');
+                        }
                     },
                 });
             });

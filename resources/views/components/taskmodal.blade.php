@@ -17,6 +17,7 @@
                     class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
                     required
                 >
+                <p x-show="formErrors.title" class="mt-1 text-xs text-red-400" x-text="formErrors.title"></p>
             </div>
 
             <div>
@@ -28,9 +29,23 @@
                     rows="3"
                 ></textarea>
                 <p class="mt-1 text-right text-xs text-zinc-500" x-text="`${form.description.length}/${$store.tasksApp.descriptionMaxLength}`"></p>
+                <p x-show="formErrors.description" class="mt-1 text-xs text-red-400" x-text="formErrors.description"></p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300">Category</label>
+                    <select
+                        x-model="form.categoryId"
+                        class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    >
+                        <option value="">General</option>
+                        <template x-for="category in categories" :key="category.id">
+                            <option :value="String(category.id)" x-text="category.name"></option>
+                        </template>
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-zinc-300">Priority</label>
                     <select
@@ -54,6 +69,18 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-zinc-300">Status</label>
+                    <select
+                        x-model="form.status"
+                        class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
+                    >
+                        <template x-for="status in statuses" :key="status">
+                            <option :value="status" x-text="status"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
                     <div class="flex items-center justify-between">
                         <label class="block text-sm font-medium text-zinc-300">Due Time</label>
                         <button
@@ -72,6 +99,8 @@
                     >
                 </div>
             </div>
+
+            <p x-show="formErrors.due_date" class="text-xs text-red-400" x-text="formErrors.due_date"></p>
 
             <div class="mt-4 flex justify-end gap-2">
                 <button
@@ -133,8 +162,8 @@
     @keydown.escape.window="cancelDeleteTask()"
 >
     <div x-cloak x-show="isDeleteConfirmOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
-        <h2 class="mb-2 text-xl font-semibold text-zinc-100">Delete Task</h2>
-        <p class="mb-6 text-sm text-zinc-400">Are you sure you want to delete this task? This action cannot be undone.</p>
+        <h2 class="mb-2 text-xl font-semibold text-zinc-100" x-text="showArchived ? 'Permanently Delete Task' : 'Move Task To Trash'"></h2>
+        <p class="mb-6 text-sm text-zinc-400" x-text="showArchived ? 'This will permanently remove the task and cannot be undone.' : 'This will move the task to trash. You can still restore it later.'"></p>
 
         <div class="flex justify-end gap-2">
             <button
@@ -148,8 +177,8 @@
                 type="button"
                 @click="confirmDeleteTask()"
                 class="rounded-md bg-red-500 px-4 py-2 text-zinc-950 transition hover:bg-red-400"
+                x-text="showArchived ? 'Delete Permanently' : 'Move to Trash'"
             >
-                Delete
             </button>
         </div>
     </div>

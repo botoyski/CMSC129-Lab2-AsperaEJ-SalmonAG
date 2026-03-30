@@ -8,7 +8,10 @@
 >
     <div class="mb-4 flex flex-1 items-start justify-between">
         <div class="min-w-0 flex-1">
-            <h3 class="mb-1 break-words text-lg font-semibold text-zinc-100" x-text="task.title"></h3>
+            <div class="mb-1 flex items-center gap-2">
+                <h3 class="break-words text-lg font-semibold text-zinc-100" x-text="task.title"></h3>
+                <span x-show="task.categoryName" class="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-300" x-text="task.categoryName"></span>
+            </div>
             <p
                 class="max-w-full text-sm text-zinc-400 break-all"
                 :class="$store.tasksApp.viewMode === 'grid' && isDescriptionExpanded ? 'max-h-24 overflow-y-auto pr-1' : ''"
@@ -16,6 +19,8 @@
                     ? `${task.description.slice(0, 140)}...`
                     : (task.description || '')"
             ></p>
+
+            <a :href="`/tasks/${task.id}`" class="mt-2 inline-flex text-xs font-medium text-sky-400 transition hover:text-sky-300">View details</a>
 
             <button
                 x-show="$store.tasksApp.viewMode === 'grid' && (task.description || '').length > 140"
@@ -76,6 +81,7 @@
             x-init="$nextTick(() => { $el.value = task.status; })"
             x-effect="$el.value = task.status"
             @change="$store.tasksApp.changeStatus($store.tasksApp.resolveTaskId(task), $event.target.value)"
+            :disabled="task.archived"
             class="cursor-pointer rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-200 outline-none"
         >
             <template x-for="status in $store.tasksApp.statuses" :key="status">

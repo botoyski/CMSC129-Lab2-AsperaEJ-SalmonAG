@@ -20,6 +20,7 @@
                             type="text"
                             placeholder="Search tasks..."
                             x-model="searchValue"
+                            @input="queueSearch()"
                             class="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 pl-10 pr-4 text-sm text-zinc-200 placeholder-zinc-500 outline-none transition focus:border-sky-500"
                         >
                     </div>
@@ -32,16 +33,16 @@
             </div>
 
             <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <x-summarycard icon="📊" label="Total Tasks" x-value="activeTasks.length" x-trend="addedTodayCount" color="blue" />
-                <x-summarycard icon="⭕" label="Not Started" x-value="countByStatus('Not Started')" color="gray" />
-                <x-summarycard icon="⚡" label="In Progress" x-value="countByStatus('In Progress')" color="orange" />
-                <x-summarycard icon="✅" label="Completed" x-value="countByStatus('Completed')" color="green" />
+                <x-summarycard icon="📊" label="Total Tasks" x-value="allCount" x-trend="addedTodayCount" color="blue" />
+                <x-summarycard icon="⭕" label="Not Started" x-value="notStartedCount" color="gray" />
+                <x-summarycard icon="⚡" label="In Progress" x-value="inProgressCount" color="orange" />
+                <x-summarycard icon="✅" label="Completed" x-value="completedCount" color="green" />
             </div>
 
             <div class="mb-6 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <h2 class="text-2xl font-bold text-zinc-100">Tasks</h2>
-                    <button type="button" @click="showArchived = !showArchived" class="rounded-lg px-3 py-1 text-sm font-medium transition" :class="showArchived ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'" x-text="showArchived ? 'Archived' : 'Active'"></button>
+                    <button type="button" @click="toggleArchived()" class="rounded-lg px-3 py-1 text-sm font-medium transition" :class="showArchived ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'" x-text="showArchived ? 'Archived' : 'Active'"></button>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -67,8 +68,19 @@
                 </div>
 
                 <template x-for="status in ['All', 'Not Started', 'In Progress', 'Completed']" :key="status">
-                    <button type="button" @click="filterStatus = status" class="rounded-full px-3 py-1 text-sm font-medium transition" :class="filterStatus === status ? 'bg-sky-500 text-zinc-950' : 'border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-sky-500'" x-text="status"></button>
+                    <button type="button" @click="setFilterStatus(status)" class="rounded-full px-3 py-1 text-sm font-medium transition" :class="filterStatus === status ? 'bg-sky-500 text-zinc-950' : 'border border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-sky-500'" x-text="status"></button>
                 </template>
+
+                <select
+                    x-model="filterCategoryId"
+                    @change="setFilterCategory(filterCategoryId)"
+                    class="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-sm font-medium text-zinc-300 outline-none"
+                >
+                    <option value="All">All Categories</option>
+                    <template x-for="category in categories" :key="category.id">
+                        <option :value="String(category.id)" x-text="category.name"></option>
+                    </template>
+                </select>
             </div>
 
             <template x-if="displayTasks.length > 0">
@@ -78,6 +90,28 @@
                     </template>
                 </div>
             </template>
+
+            <div x-show="pagination.lastPage > 1" class="mt-6 flex items-center justify-between">
+                <p class="text-sm text-zinc-400" x-text="`Showing page ${pagination.currentPage} of ${pagination.lastPage}`"></p>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        @click="goToPage(pagination.currentPage - 1)"
+                        :disabled="pagination.currentPage <= 1 || isLoading"
+                        class="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition enabled:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+                    <button
+                        type="button"
+                        @click="goToPage(pagination.currentPage + 1)"
+                        :disabled="pagination.currentPage >= pagination.lastPage || isLoading"
+                        class="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 transition enabled:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
 
             <template x-if="displayTasks.length === 0">
                 <div class="rounded-xl border border-zinc-800 bg-zinc-900 py-12 text-center">
