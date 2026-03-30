@@ -1,4 +1,8 @@
-<x-layouts.app>
+@extends('layouts.app')
+
+@section('title', 'Dashboard')
+
+@section('content')
     <div x-data="$store.tasksApp" x-init="init()" class="min-h-[calc(100vh-4rem)] bg-zinc-950 px-4 py-6 lg:px-8">
         <div class="mx-auto max-w-7xl">
             <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -86,5 +90,4 @@
 
         <x-taskmodal />
     </div>
-
-</x-layouts.app>
+@endsection

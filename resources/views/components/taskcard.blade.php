@@ -1,5 +1,4 @@
 <article
-    x-data="{ showMenu: false }"
     :class="task.priority === 'High' ? 'bg-red-500/10 border-red-500/30' : (task.priority === 'Medium' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30')"
     class="rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:shadow-black/20"
 >
@@ -9,42 +8,42 @@
             <p class="text-sm text-zinc-400" x-text="task.description"></p>
         </div>
 
-        <div class="relative ml-4">
-            <button type="button" @click="showMenu = !showMenu" class="rounded-lg p-1 transition-colors hover:bg-zinc-800">
-                <svg class="h-4.5 w-4.5 text-zinc-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M12 5H12.01M12 12H12.01M12 19H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <div class="ml-4 flex items-center gap-1">
+            <button
+                type="button"
+                @click="$store.tasksApp.editTask($store.tasksApp.resolveTaskId(task))"
+                class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                title="Edit"
+                aria-label="Edit task"
+            >
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M4 20H8L18.5 9.5C19.3 8.7 19.3 7.3 18.5 6.5L17.5 5.5C16.7 4.7 15.3 4.7 14.5 5.5L4 16V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </button>
 
-            <div x-show="showMenu" @click.outside="showMenu = false" x-transition class="absolute right-0 top-full z-10 mt-1 w-36 rounded-lg border border-zinc-800 bg-zinc-900 shadow-lg shadow-black/30">
-                <button
-                    type="button"
-                    @click="$store.tasksApp.editTask($store.tasksApp.resolveTaskId(task)); showMenu = false"
-                    class="block w-full px-4 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-800"
-                >
-                    Edit
-                </button>
-                <button
-                    type="button"
-                    @click="$store.tasksApp.archiveTask($store.tasksApp.resolveTaskId(task)); showMenu = false"
-                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-800"
-                >
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M4 7H20M5 7L6 19H18L19 7M9 11V15M15 11V15M10 7V5H14V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span x-text="$store.tasksApp.showArchived ? 'Restore' : 'Archive'"></span>
-                </button>
-                <button
-                    type="button"
-                    @click="$store.tasksApp.deleteTask($store.tasksApp.resolveTaskId(task)); showMenu = false"
-                    class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10"
-                >
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M4 7H20M9 11V17M15 11V17M6 7L7 19H17L18 7M10 7V5H14V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    Delete
-                </button>
-            </div>
+            <button
+                type="button"
+                @click="$store.tasksApp.requestArchiveTask($store.tasksApp.resolveTaskId(task))"
+                class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                :title="task.archived ? 'Restore' : 'Archive'"
+                :aria-label="task.archived ? 'Restore task' : 'Archive task'"
+            >
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M4 7H20M5 7L6 19H18L19 7M9 11V15M15 11V15M10 7V5H14V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+
+            <button
+                type="button"
+                @click="$store.tasksApp.requestDeleteTask($store.tasksApp.resolveTaskId(task))"
+                class="rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+                title="Delete"
+                aria-label="Delete task"
+            >
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M4 7H20M9 11V17M15 11V17M6 7L7 19H17L18 7M10 7V5H14V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -56,8 +55,9 @@
         ></span>
 
         <select
-            x-model="task.status"
-            @change="$store.tasksApp.changeStatus(task, $event.target.value)"
+            x-init="$nextTick(() => { $el.value = task.status; })"
+            x-effect="$el.value = task.status"
+            @change="$store.tasksApp.changeStatus($store.tasksApp.resolveTaskId(task), $event.target.value)"
             class="cursor-pointer rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-200 outline-none"
         >
             <template x-for="status in $store.tasksApp.statuses" :key="status">

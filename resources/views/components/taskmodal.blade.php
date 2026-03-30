@@ -1,10 +1,11 @@
 <div
+    x-cloak
     x-show="isModalOpen"
     x-transition.opacity
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
     @keydown.escape.window="closeModal()"
 >
-    <div x-show="isModalOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
+    <div x-cloak x-show="isModalOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
         <h2 class="mb-4 text-xl font-semibold text-zinc-100" x-text="editingTaskId ? 'Edit Task' : 'Add New Task'"></h2>
 
         <form @submit.prevent="submitTask()" class="space-y-4">
@@ -75,5 +76,69 @@
                 ></button>
             </div>
         </form>
+    </div>
+</div>
+
+<div
+    x-cloak
+    x-show="isArchiveConfirmOpen"
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+    @keydown.escape.window="cancelArchiveTask()"
+>
+    <div x-cloak x-show="isArchiveConfirmOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
+        <h2 class="mb-2 text-xl font-semibold text-zinc-100" x-text="(getTaskById(archiveTaskId)?.archived ? 'Restore Task' : 'Archive Task')"></h2>
+        <p
+            class="mb-6 text-sm text-zinc-400"
+            x-text="getTaskById(archiveTaskId)?.archived
+                ? 'Are you sure you want to restore this task to active tasks?'
+                : 'Are you sure you want to archive this task?'"
+        ></p>
+
+        <div class="flex justify-end gap-2">
+            <button
+                type="button"
+                @click="cancelArchiveTask()"
+                class="rounded-md bg-zinc-800 px-4 py-2 text-zinc-200 transition hover:bg-zinc-700"
+            >
+                Cancel
+            </button>
+            <button
+                type="button"
+                @click="confirmArchiveTask()"
+                class="rounded-md bg-amber-500 px-4 py-2 text-zinc-950 transition hover:bg-amber-400"
+                x-text="getTaskById(archiveTaskId)?.archived ? 'Restore' : 'Archive'"
+            ></button>
+        </div>
+    </div>
+</div>
+
+<div
+    x-cloak
+    x-show="isDeleteConfirmOpen"
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+    @keydown.escape.window="cancelDeleteTask()"
+>
+    <div x-cloak x-show="isDeleteConfirmOpen" x-transition class="w-full max-w-md rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-lg shadow-black/40">
+        <h2 class="mb-2 text-xl font-semibold text-zinc-100">Delete Task</h2>
+        <p class="mb-6 text-sm text-zinc-400">Are you sure you want to delete this task? This action cannot be undone.</p>
+
+        <div class="flex justify-end gap-2">
+            <button
+                type="button"
+                @click="cancelDeleteTask()"
+                class="rounded-md bg-zinc-800 px-4 py-2 text-zinc-200 transition hover:bg-zinc-700"
+            >
+                Cancel
+            </button>
+            <button
+                type="button"
+                @click="confirmDeleteTask()"
+                class="rounded-md bg-red-500 px-4 py-2 text-zinc-950 transition hover:bg-red-400"
+            >
+                Delete
+            </button>
+        </div>
     </div>
 </div>

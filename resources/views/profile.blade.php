@@ -1,4 +1,8 @@
-<x-layouts.app>
+@extends('layouts.app')
+
+@section('title', 'Profile')
+
+@section('content')
     <div class="mx-auto w-full max-w-3xl p-6 md:p-8">
         <h1 class="mb-4 text-3xl font-bold text-zinc-100">Profile</h1>
 
@@ -44,4 +48,4 @@
             </div>
         </div>
     </div>
-</x-layouts.app>
+@endsection

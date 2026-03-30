@@ -137,7 +137,7 @@
         </div>
 
         <div class="pt-16 lg:pl-64">
-            {{ $slot }}
+            @yield('content')
         </div>
 
         <script>

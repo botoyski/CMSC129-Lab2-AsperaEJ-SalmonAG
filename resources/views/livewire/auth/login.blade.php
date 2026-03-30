@@ -2,6 +2,7 @@
 
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -18,6 +19,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public string $password = '';
 
     public bool $remember = false;
+
+    public function mount(): void
+    {
+        $this->email = (string) request()->cookie('last_login_email', '');
+        $this->password = '';
+    }
 
     /**
      * Handle an incoming authentication request.
@@ -38,8 +45,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
+        Cookie::queue('last_login_email', Str::lower($this->email), 60 * 24 * 30);
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
     }
 
     /**
@@ -90,7 +98,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 type="password"
                 name="password"
                 required
-                autocomplete="current-password"
+                autocomplete="new-password"
                 placeholder="Password"
             />
 
