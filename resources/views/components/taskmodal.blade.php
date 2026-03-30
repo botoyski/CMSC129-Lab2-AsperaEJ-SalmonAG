@@ -23,9 +23,11 @@
                 <label class="block text-sm font-medium text-zinc-300">Description</label>
                 <textarea
                     x-model="form.description"
+                    :maxlength="$store.tasksApp.descriptionMaxLength"
                     class="mt-1 block w-full rounded-md border border-zinc-700 bg-zinc-950 p-2 text-zinc-200 outline-none focus:border-sky-500"
                     rows="3"
                 ></textarea>
+                <p class="mt-1 text-right text-xs text-zinc-500" x-text="`${form.description.length}/${$store.tasksApp.descriptionMaxLength}`"></p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -52,7 +54,17 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-zinc-300">Due Time</label>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-sm font-medium text-zinc-300">Due Time</label>
+                        <button
+                            type="button"
+                            x-show="form.dueTime"
+                            @click="form.dueTime = ''"
+                            class="text-xs font-medium text-zinc-400 transition hover:text-zinc-200"
+                        >
+                            Clear
+                        </button>
+                    </div>
                     <input
                         type="time"
                         x-model="form.dueTime"

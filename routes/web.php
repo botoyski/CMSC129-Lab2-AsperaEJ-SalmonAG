@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -13,6 +14,7 @@ Route::view('dashboard', 'dashboard')
 
 Route::middleware(['auth'])->group(function () {
     Route::view('profile', 'profile')->name('profile');
+    Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::redirect('settings', 'settings/profile');
 

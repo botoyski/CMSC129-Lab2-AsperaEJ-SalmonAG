@@ -148,6 +148,7 @@
                     sidebarOpen: false,
                     tasks: [],
                     statuses: ['Not Started', 'In Progress', 'Completed'],
+                    descriptionMaxLength: 100,
                     searchValue: '',
                     filterStatus: 'All',
                     filterPriority: 'All',
@@ -158,6 +159,9 @@
                     archiveTaskId: null,
                     isDeleteConfirmOpen: false,
                     deleteTaskId: null,
+                    toastMessage: '',
+                    toastVisible: false,
+                    toastTimeoutId: null,
                     editingTaskId: null,
                     form: {
                         title: '',
@@ -190,6 +194,7 @@
                         this.tasks = [
                             {
                                 id: Date.now() + 1,
+                                createdAt: '2026-03-27T09:00:00.000Z',
                                 title: 'Finalize dashboard layout',
                                 description: 'Build the initial responsive dashboard structure and align visual hierarchy.',
                                 priority: 'High',
@@ -200,6 +205,7 @@
                             },
                             {
                                 id: Date.now() + 2,
+                                createdAt: '2026-03-28T13:30:00.000Z',
                                 title: 'Connect API integration',
                                 description: 'Wire task endpoints and map response states into UI-ready collections.',
                                 priority: 'Medium',
@@ -210,6 +216,7 @@
                             },
                             {
                                 id: Date.now() + 3,
+                                createdAt: '2026-03-29T10:15:00.000Z',
                                 title: 'Polish profile view',
                                 description: 'Refine spacing, typography, and actions for the profile page experience.',
                                 priority: 'Low',
@@ -236,6 +243,28 @@
                         return this.statuses.includes(normalized) ? normalized : 'Not Started';
                     },
 
+                    sanitizeDescription(value) {
+                        return String(value || '').trim().slice(0, this.descriptionMaxLength);
+                    },
+
+                    resolveCreatedAt(task) {
+                        if (task?.createdAt) {
+                            return task.createdAt;
+                        }
+
+                        if (task?.created_at) {
+                            return task.created_at;
+                        }
+
+                        const rawId = String(task?.id ?? '').trim();
+
+                        if (/^\d{13}$/.test(rawId)) {
+                            return new Date(Number(rawId)).toISOString();
+                        }
+
+                        return null;
+                    },
+
                     normalizeTasks(taskList) {
                         const seenIds = new Set();
 
@@ -257,9 +286,10 @@
                                 archived: Boolean(task.archived),
                                 priority: task.priority || 'Medium',
                                 status: this.normalizeStatus(task.status),
-                                description: task.description || '',
+                                description: this.sanitizeDescription(task.description),
                                 dueDate: task.dueDate || '',
                                 dueTime: task.dueTime || '',
+                                createdAt: this.resolveCreatedAt(task),
                             };
                         });
                     },
@@ -320,6 +350,18 @@
                         return this.activeTasks.length;
                     },
 
+                    get addedTodayCount() {
+                        const todayKey = new Date().toISOString().slice(0, 10);
+
+                        return this.activeTasks.filter((task) => {
+                            if (!task.createdAt) {
+                                return false;
+                            }
+
+                            return String(task.createdAt).slice(0, 10) === todayKey;
+                        }).length;
+                    },
+
                     get notStartedCount() {
                         return this.activeTasks.filter((task) => task.status === 'Not Started').length;
                     },
@@ -378,7 +420,7 @@
                         this.editingTaskId = task.id;
                         this.form = {
                             title: task.title || '',
-                            description: task.description || '',
+                            description: this.sanitizeDescription(task.description),
                             priority: task.priority || 'Medium',
                             dueDate: task.dueDate || '',
                             dueTime: task.dueTime || '',
@@ -389,6 +431,20 @@
                     closeModal() {
                         this.isModalOpen = false;
                         this.editingTaskId = null;
+                    },
+
+                    showToast(message) {
+                        this.toastMessage = message;
+                        this.toastVisible = true;
+
+                        if (this.toastTimeoutId) {
+                            clearTimeout(this.toastTimeoutId);
+                        }
+
+                        this.toastTimeoutId = setTimeout(() => {
+                            this.toastVisible = false;
+                            this.toastMessage = '';
+                        }, 2200);
                     },
 
                     requestDeleteTask(taskId) {
@@ -412,6 +468,7 @@
 
                         this.deleteTask(this.deleteTaskId);
                         this.cancelDeleteTask();
+                        this.showToast('Task successfully deleted');
                     },
 
                     submitTask() {
@@ -428,15 +485,16 @@
                             }
 
                             task.title = this.form.title.trim();
-                            task.description = (this.form.description || '').trim();
+                            task.description = this.sanitizeDescription(this.form.description);
                             task.priority = this.form.priority;
                             task.dueDate = this.form.dueDate;
                             task.dueTime = this.form.dueTime;
                         } else {
                             this.tasks.unshift({
                                 id: Date.now(),
+                                createdAt: new Date().toISOString(),
                                 title: this.form.title.trim(),
-                                description: (this.form.description || '').trim(),
+                                description: this.sanitizeDescription(this.form.description),
                                 priority: this.form.priority,
                                 status: 'Not Started',
                                 dueDate: this.form.dueDate,
@@ -468,8 +526,12 @@
                             return;
                         }
 
+                        const task = this.getTaskById(this.archiveTaskId);
+                        const wasArchived = Boolean(task?.archived);
+
                         this.archiveTask(this.archiveTaskId);
                         this.cancelArchiveTask();
+                        this.showToast(wasArchived ? 'Task successfully restored' : 'Task successfully archived');
                     },
 
                     archiveTask(taskId) {

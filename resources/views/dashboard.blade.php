@@ -32,7 +32,7 @@
             </div>
 
             <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <x-summarycard icon="📊" label="Total Tasks" x-value="activeTasks.length" color="blue" :trend="2" />
+                <x-summarycard icon="📊" label="Total Tasks" x-value="activeTasks.length" x-trend="addedTodayCount" color="blue" />
                 <x-summarycard icon="⭕" label="Not Started" x-value="countByStatus('Not Started')" color="gray" />
                 <x-summarycard icon="⚡" label="In Progress" x-value="countByStatus('In Progress')" color="orange" />
                 <x-summarycard icon="✅" label="Completed" x-value="countByStatus('Completed')" color="green" />
@@ -89,5 +89,14 @@
         </div>
 
         <x-taskmodal />
+
+        <div
+            x-cloak
+            x-show="$store.tasksApp.toastVisible"
+            x-transition.opacity.duration.200ms
+            class="pointer-events-none fixed bottom-6 right-6 z-[60]"
+        >
+            <div class="rounded-lg border border-emerald-600 bg-emerald-500 px-4 py-3 text-sm font-medium text-zinc-950 shadow-lg shadow-black/30" x-text="$store.tasksApp.toastMessage"></div>
+        </div>
     </div>
 @endsection

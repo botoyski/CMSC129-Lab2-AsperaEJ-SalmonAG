@@ -1,14 +1,32 @@
 <article
-    :class="task.priority === 'High' ? 'bg-red-500/10 border-red-500/30' : (task.priority === 'Medium' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30')"
-    class="rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:shadow-black/20"
+    x-data="{ isDescriptionExpanded: false }"
+    :class="[
+        task.priority === 'High' ? 'bg-red-500/10 border-red-500/30' : (task.priority === 'Medium' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30'),
+        $store.tasksApp.viewMode === 'grid' ? 'h-[320px]' : ''
+    ]"
+    class="flex h-full flex-col overflow-hidden rounded-lg border p-6 shadow-sm transition-all hover:shadow-md hover:shadow-black/20"
 >
-    <div class="mb-4 flex items-start justify-between">
-        <div class="flex-1">
-            <h3 class="mb-1 text-lg font-semibold text-zinc-100" x-text="task.title"></h3>
-            <p class="text-sm text-zinc-400" x-text="task.description"></p>
+    <div class="mb-4 flex flex-1 items-start justify-between">
+        <div class="min-w-0 flex-1">
+            <h3 class="mb-1 break-words text-lg font-semibold text-zinc-100" x-text="task.title"></h3>
+            <p
+                class="max-w-full text-sm text-zinc-400 break-all"
+                :class="$store.tasksApp.viewMode === 'grid' && isDescriptionExpanded ? 'max-h-24 overflow-y-auto pr-1' : ''"
+                x-text="$store.tasksApp.viewMode === 'grid' && !isDescriptionExpanded && (task.description || '').length > 140
+                    ? `${task.description.slice(0, 140)}...`
+                    : (task.description || '')"
+            ></p>
+
+            <button
+                x-show="$store.tasksApp.viewMode === 'grid' && (task.description || '').length > 140"
+                type="button"
+                @click="isDescriptionExpanded = !isDescriptionExpanded"
+                class="mt-2 text-xs font-medium text-sky-400 transition hover:text-sky-300"
+                x-text="isDescriptionExpanded ? 'Show less' : 'Read more'"
+            ></button>
         </div>
 
-        <div class="ml-4 flex items-center gap-1">
+        <div class="ml-4 flex shrink-0 items-center gap-1">
             <button
                 type="button"
                 @click="$store.tasksApp.editTask($store.tasksApp.resolveTaskId(task))"
@@ -47,7 +65,7 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-4">
+    <div class="mt-auto flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-4">
         <span
             :class="task.priority === 'High' ? 'bg-red-500/20 text-red-300' : (task.priority === 'Medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300')"
             class="rounded-full px-3 py-1 text-xs font-medium"
@@ -65,11 +83,21 @@
             </template>
         </select>
 
-        <div class="ml-auto flex items-center gap-1 text-xs text-zinc-400">
+        <div class="ml-auto flex items-center justify-end gap-1 whitespace-nowrap text-xs text-zinc-400">
             <span>📅</span>
             <span x-text="task.dueDate"></span>
             <template x-if="task.dueTime">
-                <span x-text="'at ' + task.dueTime"></span>
+                <span
+                    class="inline-block"
+                    x-text="(() => {
+                        const [hours, minutes] = task.dueTime.split(':');
+                        const hourNumber = Number(hours);
+                        const period = hourNumber >= 12 ? 'PM' : 'AM';
+                        const displayHour = ((hourNumber + 11) % 12) + 1;
+
+                        return `, ${displayHour}:${minutes} ${period}`;
+                    })()"
+                ></span>
             </template>
         </div>
     </div>

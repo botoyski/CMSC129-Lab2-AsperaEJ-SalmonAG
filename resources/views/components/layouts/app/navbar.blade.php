@@ -16,7 +16,20 @@
         </div>
 
         <div class="flex items-center gap-6">
-            <div class="hidden text-sm font-medium text-zinc-400 sm:block">09:41 AM</div>
+            <div
+                x-data="{
+                    currentTime: '',
+                    updateTime() {
+                        this.currentTime = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                    },
+                    init() {
+                        this.updateTime();
+                        setInterval(() => this.updateTime(), 60000);
+                    }
+                }"
+                x-text="currentTime"
+                class="hidden text-sm font-medium text-zinc-400 sm:block"
+            ></div>
 
             <button type="button" class="relative rounded-lg p-2 transition-colors hover:bg-zinc-800" aria-label="Notifications">
                 <svg class="h-5 w-5 text-zinc-200" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

@@ -158,6 +158,9 @@
                     archiveTaskId: null,
                     isDeleteConfirmOpen: false,
                     deleteTaskId: null,
+                    toastMessage: '',
+                    toastVisible: false,
+                    toastTimeoutId: null,
                     editingTaskId: null,
                     form: {
                         title: '',
@@ -391,6 +394,20 @@
                         this.editingTaskId = null;
                     },
 
+                    showToast(message) {
+                        this.toastMessage = message;
+                        this.toastVisible = true;
+
+                        if (this.toastTimeoutId) {
+                            clearTimeout(this.toastTimeoutId);
+                        }
+
+                        this.toastTimeoutId = setTimeout(() => {
+                            this.toastVisible = false;
+                            this.toastMessage = '';
+                        }, 2200);
+                    },
+
                     requestDeleteTask(taskId) {
                         if (!taskId) {
                             return;
@@ -412,6 +429,7 @@
 
                         this.deleteTask(this.deleteTaskId);
                         this.cancelDeleteTask();
+                        this.showToast('Task successfully deleted');
                     },
 
                     submitTask() {
@@ -468,8 +486,12 @@
                             return;
                         }
 
+                        const task = this.getTaskById(this.archiveTaskId);
+                        const wasArchived = Boolean(task?.archived);
+
                         this.archiveTask(this.archiveTaskId);
                         this.cancelArchiveTask();
+                        this.showToast(wasArchived ? 'Task successfully restored' : 'Task successfully archived');
                     },
 
                     archiveTask(taskId) {
