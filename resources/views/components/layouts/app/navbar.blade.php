@@ -9,7 +9,7 @@
 
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2" wire:navigate>
                 <div class="h-8 w-8 overflow-hidden rounded-lg">
-                    <x-app-logo class="size-8" href="#"></x-app-logo>
+                    <x-app-logo class="size-8"></x-app-logo>
                 </div>
                 <h1 class="hidden text-xl font-bold text-zinc-100 sm:block">Move it!</h1>
             </a>

@@ -6,7 +6,7 @@
     <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
         <x-layouts.app.navbar />
 
-        <div x-data="{ expandedSections: { status: true, priority: true, projects: true } }">
+        <div x-data="{ expandedSections: { status: true, priority: true, ai: true, projects: true } }">
             <div
                 x-show="$store.tasksApp.sidebarOpen"
                 x-transition.opacity
@@ -109,6 +109,26 @@
                         </nav>
                     </div>
 
+                    <div class="mb-8 border-b border-zinc-800 pb-8">
+                        <button @click="expandedSections.ai = !expandedSections.ai" class="mb-4 flex w-full items-center justify-between px-2" type="button">
+                            <h4 class="text-xs font-bold uppercase tracking-wide text-zinc-500">AI Assistant</h4>
+                            <svg class="h-4 w-4 text-zinc-500 transition-transform" :class="expandedSections.ai ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+
+                        <nav x-show="expandedSections.ai" x-transition class="space-y-2">
+                            <button
+                                type="button"
+                                @click="$store.tasksApp.openChatModal(); $store.tasksApp.closeSidebar()"
+                                class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-800"
+                            >
+                                <span class="text-lg">🤖</span>
+                                <span>AI Chatbot</span>
+                            </button>
+                        </nav>
+                    </div>
+
                     <div>
                         <button @click="expandedSections.projects = !expandedSections.projects" class="mb-4 flex w-full items-center justify-between px-2" type="button">
                             <h4 class="text-xs font-bold uppercase tracking-wide text-zinc-500">Projects</h4>
@@ -138,6 +158,80 @@
 
         <div class="pt-16 lg:pl-64">
             @yield('content')
+        </div>
+
+        <div x-data>
+            <button
+                type="button"
+                @click="$store.tasksApp.toggleChatModal()"
+                class="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-100 shadow-lg shadow-black/30 transition hover:-translate-y-0.5 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+                aria-label="Open chat"
+            >
+                <svg class="h-8 w-8 text-zinc-100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="4" y="6" width="16" height="12" rx="4" stroke="currentColor" stroke-width="1.6" />
+                    <circle cx="9" cy="12" r="1" fill="currentColor" />
+                    <circle cx="15" cy="12" r="1" fill="currentColor" />
+                    <path d="M9 15.5H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <path d="M12 3V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+            </button>
+
+            <div
+                x-show="$store.tasksApp.isChatModalOpen"
+                x-transition
+                class="fixed inset-0 z-40 bg-black/50"
+                @click="$store.tasksApp.closeChatModal()"
+            ></div>
+
+            <div
+                x-show="$store.tasksApp.isChatModalOpen"
+                x-transition
+                class="fixed bottom-24 right-6 z-50 flex h-96 w-80 flex-col overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/50 sm:w-96 md:h-[32rem]"
+            >
+            <div class="flex items-center justify-between border-b border-zinc-800 bg-zinc-800/50 px-4 py-3">
+                <h2 class="text-sm font-semibold text-zinc-100">AI Chat Assistant</h2>
+                <button
+                    type="button"
+                    @click="$store.tasksApp.closeChatModal()"
+                    class="rounded p-1 transition-colors hover:bg-zinc-700"
+                    aria-label="Close chat"
+                >
+                    <svg class="h-5 w-5 text-zinc-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-4 py-4">
+                <div class="space-y-4">
+                    <div class="flex justify-start">
+                        <div class="max-w-xs rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100">
+                            Hi there! How can I help you today?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-zinc-800 bg-zinc-800/50 px-4 py-3">
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        placeholder="Type your message..."
+                        class="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
+                    />
+                    <button
+                        type="button"
+                        class="rounded bg-zinc-700 px-3 py-2 text-sm text-zinc-100 transition hover:bg-zinc-600 disabled:opacity-50"
+                        disabled
+                        aria-label="Send message"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.6915026,12.4744748 L3.50612381,13.2599618 C3.19218622,13.2599618 3.03521743,13.4170592 3.03521743,13.5741566 L1.15159189,20.0151496 C0.8376543,20.8006365 0.99,21.89 1.77946707,22.52 C2.41,22.99 3.50612381,23.1 4.13399899,22.99 L21.714504,14.0454487 C22.6563168,13.5741566 23.1272231,12.6315722 22.9702544,11.6889879 L4.13399899,1.01401515 C3.34915502,0.9 2.40734225,1.00636533 1.77946707,1.4776575 C0.994623095,2.10604706 0.837654326,3.0486314 1.15159189,3.99040561 L3.03521743,10.4314005 C3.03521743,10.5884979 3.34915502,10.7455953 3.50612381,10.7455953 L16.6915026,11.5310822 C16.6915026,11.5310822 17.1624089,11.5310822 17.1624089,12.0023744 C17.1624089,12.4744748 16.6915026,12.4744748 16.6915026,12.4744748 Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
         </div>
 
         <script>
@@ -181,6 +275,7 @@
                     toastVisible: false,
                     toastTimeoutId: null,
                     editingTaskId: null,
+                    isChatModalOpen: false,
                     form: {
                         title: '',
                         description: '',
@@ -286,6 +381,18 @@
 
                     closeSidebar() {
                         this.sidebarOpen = false;
+                    },
+
+                    toggleChatModal() {
+                        this.isChatModalOpen = !this.isChatModalOpen;
+                    },
+
+                    openChatModal() {
+                        this.isChatModalOpen = true;
+                    },
+
+                    closeChatModal() {
+                        this.isChatModalOpen = false;
                     },
 
                     setFilterStatus(val) {
