@@ -1,155 +1,144 @@
-# CMSC 129 Lab 2 - Task Management App
+# CMSC 129 Lab 3 - AI-Enhanced Task Management (Laravel MVC)
 
-## Application Description
-This is a Laravel + PostgreSQL task management application for CMSC 129 Lab 2.
+## Overview
+This project extends the Lab 2 Laravel MVC CRUD app by integrating AI features:
 
-Main purpose:
-- Let users register/login and manage tasks.
-- Demonstrate Laravel MVC architecture with full CRUD.
-- Demonstrate database features like relationships, soft deletes, seeding, and filtered retrieval.
+- AI Chatbot (Inquiry Mode): answers natural-language questions about your tasks and categories.
+- AI Assistant (CRUD Mode): performs task operations through natural language (create, update status/priority, archive, restore).
+- On-page floating chat widget: usable directly from the dashboard while viewing your tasks.
+- Destructive operation confirmation: update/delete actions require explicit confirmation before execution.
+- Intelligent context awareness: supports follow-up filtering and pronoun-based references from recent results.
+
+## AI Service and Model
+This implementation uses an OpenAI-compatible Chat Completions API via backend proxy.
+
+Default configuration:
+- Provider endpoint: `https://api.openai.com/v1`
+- Model: `gpt-4o-mini`
+
+You can switch to other compatible providers (Groq, other OpenAI-compatible endpoints) by changing environment variables.
 
 ## Tech Stack
 - Laravel 12
 - PHP 8.3
 - PostgreSQL
 - Blade + Alpine.js
-- Tailwind CSS (via Vite)
+- Tailwind CSS (Vite)
+- OpenAI-compatible LLM API (server-side only)
 
-## Implemented Features
-### Core Features (Rubric)
-- Full CRUD for tasks:
-  - Create task
-  - Read task list and task details
-  - Update task
-  - Delete task
-- MVC architecture:
-  - Model: Task, Category, User
-  - View: Blade templates and components
-  - Controller: TaskController, ProfileController
-- Database and ORM:
-  - PostgreSQL connection via .env
-  - Laravel migrations
-  - Eloquent ORM for all operations
-- Blade requirements:
-  - Layouts with section/yield pattern
-  - Reusable components
-  - CSRF token support
-  - Validation errors displayed in modal forms
+## Lab 3 Requirements Coverage
 
-### Expanded Features
-- Soft delete with restore and permanent delete:
-  - Soft delete to Trash
-  - Restore from Trash
-  - Permanent delete from Trash
-- Search and filter:
-  - Search by title/description/category
-  - Filters by status, priority, and category
-  - Works with pagination
-- Database relationship:
-  - Category hasMany Task
-  - Task belongsTo Category
-  - Task belongsTo User
-- Seeding with Faker:
-  - CategorySeeder
-  - TaskSeeder
+### 1. AI Chatbot for Inquiries
+Implemented in Inquiry Mode:
+- Accepts natural language input in the dashboard chat widget.
+- Retrieves task/category data from database through backend logic.
+- Returns conversational responses.
+- Supports conversation context (recent messages stored in session, last 5-10 turns).
+- Handles unclear prompts with graceful fallback examples.
+- Supports follow-up filtering from previous results (e.g., high-priority from previous list, then due this week).
+- Supports implicit references like "it/its" to the last focused task in context.
 
-## Project Structure and MVC Explanation
-- app/Models/User.php:
-  - Eloquent user model, hasMany tasks.
-- app/Models/Task.php:
-  - Main resource model, uses SoftDeletes, belongsTo user and category.
-- app/Models/Category.php:
-  - Related model, hasMany tasks.
-- app/Http/Controllers/TaskController.php:
-  - Handles business logic for task CRUD, search/filter, trash/restore/force delete.
-- app/Http/Requests/StoreTaskRequest.php:
-  - Validation rules/messages for create.
-- app/Http/Requests/UpdateTaskRequest.php:
-  - Validation rules/messages for update.
-- resources/views/dashboard.blade.php:
-  - Main task UI page.
-- resources/views/components/taskcard.blade.php:
-  - Reusable task card UI component.
-- resources/views/components/taskmodal.blade.php:
-  - Reusable create/edit/archive/delete modal component.
-- resources/views/tasks/show.blade.php:
-  - Task detail page.
-- routes/web.php:
-  - Resource routes and custom restore/force-delete routes.
-- database/migrations:
-  - Schema definitions for users, categories, tasks, and framework tables.
-- database/seeders:
-  - Seeds test data for quick demo.
+Supported inquiry types include:
+1. Tasks due today
+2. Tasks by priority (High/Medium/Low)
+3. Count of completed tasks
+4. Oldest pending task
+5. Tasks by category
+6. Total category count
+7. General task listing
 
-## Environment Setup
-### 1. Prerequisites
-Install or make sure you have:
-- PHP 8.2+ (8.3 used in this project)
-- Composer
-- Node.js + npm
-- PostgreSQL server
+### 2. Dummy Data
+- Seeder creates at least 20 sample tasks for the test user.
+- Includes varied statuses, priorities, due dates, and categories.
 
-### 2. Clone and Install
-Run inside project root:
+### 3. On-Page Chat Interface
+- Floating chat button on dashboard.
+- Toggle open/close modal widget.
+- Message history display.
+- Input + send button.
+- Loading state while AI is processing.
+- Error messaging for failures.
+- Inquiry/CRUD mode switch inside chat panel.
+- Confirmation panel with Confirm/Cancel buttons for destructive actions.
+
+### Expanded Requirements (Perfect Score Targets)
+- CRUD via natural language commands
+  - Create, Read, Update, Delete are supported through assistant mode.
+  - Tool-style backend dispatch executes operations server-side.
+  - Update/Delete require confirmation before changes are applied.
+- Intelligent context awareness
+  - Conversation history maintained in session (last 10+ messages).
+  - Follow-up questions can filter prior results progressively.
+  - Pronoun/implicit references use last focused task context.
+
+## Security and Best Practices
+- API keys are never exposed to frontend.
+- All LLM calls are made from backend route: `POST /assistant/chat`.
+- Uses environment variables for secrets.
+- Route is authenticated and rate-limited (`throttle:20,1`).
+- AI never receives direct database credentials or direct DB access.
+
+## Project Structure (AI Additions)
+- `app/Http/Controllers/AiAssistantController.php`
+  - Validates requests
+  - Manages inquiry and CRUD operations
+  - Maintains chat context in session
+- `app/Services/Ai/LlmChatService.php`
+  - Calls OpenAI-compatible API
+  - Performs intent parsing and response composition
+- `routes/web.php`
+  - Adds authenticated assistant endpoint
+- `resources/views/layouts/app.blade.php`
+  - Implements interactive chat widget and Alpine chat logic
+- `config/services.php`
+  - Adds `ai_assistant` config
+- `.env.example`
+  - Adds required LLM environment variables
+
+## Environment Variables
+Add to `.env`:
+
+```dotenv
+LLM_API_KEY=your_real_api_key_here
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+LLM_TIMEOUT_SECONDS=20
+```
+
+Notes:
+- Do not commit real API keys.
+- Keep `.env` local only.
+- Commit `.env.example` only.
+
+## Setup Instructions
+1. Install dependencies:
 
 ```powershell
 composer install
 npm install
 ```
 
-### 3. Environment File
-Copy env template:
+2. Create environment file:
 
 ```powershell
 Copy-Item .env.example .env -Force
 ```
 
-Configure database in .env:
+3. Configure database and AI environment values in `.env`.
 
-```dotenv
-DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=lab2
-DB_USERNAME=laravel_user
-DB_PASSWORD=password
-```
-
-Generate app key:
+4. Generate app key:
 
 ```powershell
 php artisan key:generate
 ```
 
-## PostgreSQL Driver Fix (Important)
-If you see `could not find driver` while migrating, enable pgsql drivers in your active php.ini:
-
-- extension=pdo_pgsql
-- extension=pgsql
-
-Quick check:
-
-```powershell
-php -m
-```
-
-Expected to include:
-- pdo_pgsql
-- pgsql
-
-## Database Setup and Migration
-Create your PostgreSQL database first (example name: lab2), then run:
+5. Run migrations and seeders:
 
 ```powershell
 php artisan migrate --seed
 ```
 
-This will:
-- Create all tables
-- Run CategorySeeder and TaskSeeder
-
-## Run the Application
-Use two terminals in project root:
+6. Start app (2 terminals):
 
 Terminal 1:
 ```powershell
@@ -161,105 +150,50 @@ Terminal 2:
 php artisan serve
 ```
 
-Open:
-- http://127.0.0.1:8000
+7. Open app:
+- `http://127.0.0.1:8000`
 
-## How to Verify Database Reflection
-### A. Quick Laravel checks
-1. Show DB connection and tables:
+## Example Queries (Inquiry Mode)
+- What tasks are due today?
+- Show me all high-priority tasks.
+- How many completed tasks do I have?
+- What is my oldest pending task?
+- List tasks in the Work category.
+- How many categories are there?
 
-```powershell
-php artisan db:show
-```
+## Example Commands (CRUD Mode)
+- Create task "Prepare Lab 3 slides" due 2026-05-03.
+- Mark "Prepare Lab 3 slides" as Completed.
+- Set priority of "Prepare Lab 3 slides" to High.
+- Change the due date of "Prepare Lab 3 slides" to next Friday.
+- Archive task "Prepare Lab 3 slides".
+- Restore task "Prepare Lab 3 slides".
+- Delete all completed tasks from last month.
 
-2. Show tasks table schema:
+Notes for destructive operations:
+- For Update/Delete requests, the assistant responds with a confirmation prompt first.
+- You must click Confirm (or type Confirm) before the operation executes.
 
-```powershell
-php artisan db:table tasks
-```
-
-3. Show users:
-
-```powershell
-php artisan tinker --execute="dump(App\Models\User::query()->orderByDesc('id')->get(['id','name','email','created_at'])->toArray());"
-```
-
-4. Show task counts per user:
-
-```powershell
-php artisan tinker --execute="dump(App\Models\Task::query()->selectRaw('user_id, COUNT(*) as total')->groupBy('user_id')->orderBy('user_id')->get()->toArray());"
-```
-
-5. Show tasks for a specific user (example user_id 2):
-
-```powershell
-php artisan tinker --execute="dump(App\Models\Task::query()->with('user:id,name,email')->where('user_id', 2)->latest()->get(['id','user_id','title','status','priority','due_date','created_at'])->toArray());"
-```
-
-### B. GUI checks using HeidiSQL (Laragon)
-If Laragon shortcut gives launch directory error, run:
+## Troubleshooting
+1. Assistant unavailable / fallback replies only
+- Check `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` in `.env`.
+- Verify outbound internet access.
+- Clear config cache:
 
 ```powershell
-Start-Process -FilePath "C:\laragon\bin\heidisql\heidisql.exe" -WorkingDirectory "C:\laragon\bin\heidisql"
+php artisan config:clear
 ```
 
-Connection values:
-- Type: PostgreSQL (TCP/IP)
-- Host: 127.0.0.1
-- Port: 5432
-- User: laravel_user
-- Password: password
-- Database: lab2
+2. Database issues
+- Verify PostgreSQL connection settings in `.env`.
+- Ensure `pdo_pgsql` and `pgsql` extensions are enabled.
 
-Then:
-- Open connection
-- Expand lab2
-- Open Tables
-- Right-click table -> Select rows
+3. Frontend not updating
+- Confirm Vite is running (`npm run dev`).
+- Hard refresh browser after changes.
 
-## Common Troubleshooting
-### 1. `could not find driver`
-- Enable pgsql extensions in php.ini.
-- Verify with `php -m`.
-
-### 2. `php artisan serve` exits with code 1
-Try:
-
-```powershell
-php artisan optimize:clear
-php artisan serve --host=127.0.0.1 --port=8001
-```
-
-If 8000 is occupied, use another port.
-
-### 3. `npm run dev` exits with code 1
-Try:
-
-```powershell
-npm install
-npm run dev
-```
-
-Also verify Node.js is installed:
-
-```powershell
-node -v
-npm -v
-```
-
-## Sample Demo Flow for Presentation
-1. Register a new account.
-2. Create a task under that account.
-3. Confirm user/task in DB using tinker command.
-4. Update task status/priority.
-5. Move task to Trash (soft delete).
-6. Restore task from Trash.
-7. Permanently delete a trashed task.
-
-## Screenshots
-Add your screenshots here before submission:
-
-## Notes
-- .env is private and should not be committed.
-- .env.example is a template for setup and should be committed.
-- UI was prepared by project frontend work, backend is integrated to PostgreSQL via Laravel APIs.
+## Screenshots to Add for Submission
+- Inquiry mode interaction (at least 2 sample questions)
+- CRUD mode interaction (create/update/delete or restore)
+- Dashboard with floating chat widget visible
+- Error state sample (optional but recommended)
