@@ -19,7 +19,7 @@ class TaskSeeder extends Seeder
 
         $categoryIds = Category::query()->pluck('id')->all();
 
-        Task::factory(10)
+        Task::factory(20)
             ->state(fn () => [
                 'user_id' => $user->id,
                 'category_id' => fake()->randomElement($categoryIds),

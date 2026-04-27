@@ -226,31 +226,66 @@
                     Current mode: Inquiry only. The assistant answers questions without changing data.
                 </p>
                 <p class="mt-1.5 text-[11px] text-zinc-400" x-show="$store.tasksApp.chatMode === 'crud'">
-                    Current mode: CRUD actions enabled as a UI placeholder for future backend integration.
+                    Current mode: CRUD actions enabled. The assistant can create, update, archive, and restore tasks.
                 </p>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-4 py-4">
-                <div class="space-y-4">
-                    <div class="flex justify-start">
-                        <div class="max-w-xs rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-100">
-                            Hi there! How can I help you today?
+            <div class="flex-1 overflow-y-auto px-4 py-4" x-ref="chatMessagesBox">
+                <div class="space-y-3">
+                    <template x-for="(message, index) in $store.tasksApp.chatMessages" :key="`msg-${index}`">
+                        <div class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
+                            <div
+                                class="max-w-[85%] rounded-lg px-3 py-2 text-sm"
+                                :class="message.role === 'user' ? 'bg-blue-500 text-zinc-950' : 'bg-zinc-800 text-zinc-100'"
+                                x-text="message.content"
+                            ></div>
+                        </div>
+                    </template>
+
+                    <div x-show="$store.tasksApp.isChatLoading" class="flex justify-start">
+                        <div class="rounded-lg bg-zinc-800 px-3 py-2 text-sm text-zinc-300">
+                            Assistant is thinking...
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="border-t border-zinc-800 bg-zinc-800/50 px-4 py-3">
+                <div x-show="$store.tasksApp.pendingConfirmationSummary" class="mb-2 rounded-md border border-amber-400/40 bg-amber-500/10 p-2">
+                    <p class="text-xs text-amber-200" x-text="`Confirmation required: ${$store.tasksApp.pendingConfirmationSummary}`"></p>
+                    <div class="mt-2 flex gap-2">
+                        <button
+                            type="button"
+                            @click="$store.tasksApp.confirmPendingAction()"
+                            class="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-zinc-950 transition hover:bg-emerald-500"
+                            :disabled="$store.tasksApp.isChatLoading"
+                        >
+                            Confirm
+                        </button>
+                        <button
+                            type="button"
+                            @click="$store.tasksApp.cancelPendingAction()"
+                            class="rounded bg-zinc-700 px-2 py-1 text-xs font-medium text-zinc-100 transition hover:bg-zinc-600"
+                            :disabled="$store.tasksApp.isChatLoading"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
                 <div class="flex gap-2">
                     <input
                         type="text"
                         placeholder="Type your message..."
+                        x-model="$store.tasksApp.chatInput"
+                        @keydown.enter.prevent="$store.tasksApp.sendChatMessage()"
                         class="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
                     />
                     <button
                         type="button"
+                        @click="$store.tasksApp.sendChatMessage()"
                         class="rounded bg-zinc-700 px-3 py-2 text-sm text-zinc-100 transition hover:bg-zinc-600 disabled:opacity-50"
-                        disabled
+                        :disabled="$store.tasksApp.isChatLoading || !$store.tasksApp.chatInput.trim()"
                         aria-label="Send message"
                     >
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -258,6 +293,7 @@
                         </svg>
                     </button>
                 </div>
+                <p class="mt-2 text-xs text-rose-300" x-show="$store.tasksApp.chatError" x-text="$store.tasksApp.chatError"></p>
             </div>
         </div>
         </div>
@@ -305,6 +341,16 @@
                     editingTaskId: null,
                     isChatModalOpen: false,
                     chatMode: 'inquiry',
+                    chatInput: '',
+                    chatError: '',
+                    isChatLoading: false,
+                    pendingConfirmationSummary: '',
+                    chatMessages: [
+                        {
+                            role: 'assistant',
+                            content: 'Hi there! Ask about your tasks, or switch to CRUD mode to create and update tasks using natural language.',
+                        },
+                    ],
                     form: {
                         title: '',
                         description: '',
@@ -414,10 +460,15 @@
 
                     toggleChatModal() {
                         this.isChatModalOpen = !this.isChatModalOpen;
+
+                        if (this.isChatModalOpen) {
+                            setTimeout(() => this.scrollChatToBottom(), 0);
+                        }
                     },
 
                     openChatModal() {
                         this.isChatModalOpen = true;
+                        setTimeout(() => this.scrollChatToBottom(), 0);
                     },
 
                     closeChatModal() {
@@ -430,6 +481,90 @@
                         }
 
                         this.chatMode = mode;
+                    },
+
+                    scrollChatToBottom() {
+                        const panel = document.querySelector('[x-ref="chatMessagesBox"]');
+                        if (!panel) {
+                            return;
+                        }
+
+                        panel.scrollTop = panel.scrollHeight;
+                    },
+
+                    appendChatMessage(role, content) {
+                        this.chatMessages.push({ role, content });
+
+                        if (this.chatMessages.length > 30) {
+                            this.chatMessages = this.chatMessages.slice(-30);
+                        }
+
+                        setTimeout(() => this.scrollChatToBottom(), 0);
+                    },
+
+                    confirmPendingAction() {
+                        this.sendChatMessage('__confirm__', false);
+                    },
+
+                    cancelPendingAction() {
+                        this.sendChatMessage('__cancel__', false);
+                    },
+
+                    async sendChatMessage(forcedMessage = null, appendAsUser = true) {
+                        const message = forcedMessage ? String(forcedMessage).trim() : this.chatInput.trim();
+
+                        if (!message || this.isChatLoading) {
+                            return;
+                        }
+
+                        this.chatError = '';
+
+                        if (!forcedMessage) {
+                            this.chatInput = '';
+                        }
+
+                        if (appendAsUser) {
+                            this.appendChatMessage('user', message);
+                        }
+
+                        this.isChatLoading = true;
+
+                        try {
+                            const response = await fetch('/assistant/chat', {
+                                method: 'POST',
+                                headers: this.buildHeaders({
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrfToken(),
+                                }),
+                                body: JSON.stringify({
+                                    message,
+                                    mode: this.chatMode,
+                                }),
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Could not process chat request.');
+                            }
+
+                            const payload = await response.json();
+                            const reply = String(payload.reply || 'I was unable to generate a response.');
+
+                            this.appendChatMessage('assistant', reply);
+
+                            this.pendingConfirmationSummary = payload.needsConfirmation
+                                ? String(payload.confirmationSummary || 'destructive action')
+                                : '';
+
+                            if (payload.refreshTasks) {
+                                await this.fetchTasks(this.pagination.currentPage || 1);
+                            }
+                        } catch (error) {
+                            this.chatError = 'Assistant is currently unavailable. Please verify your AI configuration and try again.';
+                            this.pendingConfirmationSummary = '';
+                            this.appendChatMessage('assistant', 'I am having trouble right now. Please try again in a moment.');
+                        } finally {
+                            this.isChatLoading = false;
+                        }
                     },
 
                     setFilterStatus(val) {
