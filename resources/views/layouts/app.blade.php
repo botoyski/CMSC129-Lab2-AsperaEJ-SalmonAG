@@ -202,6 +202,34 @@
                 </button>
             </div>
 
+            <div class="border-b border-zinc-800 bg-zinc-900 px-3 py-2">
+                <p class="mb-1 text-[10px] font-medium uppercase tracking-wide text-zinc-400">Assistant Mode</p>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button
+                        type="button"
+                        @click="$store.tasksApp.setChatMode('inquiry')"
+                        class="rounded border px-2 py-1 text-[11px] font-medium transition"
+                        :class="$store.tasksApp.chatMode === 'inquiry' ? 'border-blue-500 bg-blue-500/15 text-blue-300' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'"
+                    >
+                        Inquiry Only
+                    </button>
+                    <button
+                        type="button"
+                        @click="$store.tasksApp.setChatMode('crud')"
+                        class="rounded border px-2 py-1 text-[11px] font-medium transition"
+                        :class="$store.tasksApp.chatMode === 'crud' ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300' : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'"
+                    >
+                        CRUD Actions
+                    </button>
+                </div>
+                <p class="mt-1.5 text-[11px] text-zinc-400" x-show="$store.tasksApp.chatMode === 'inquiry'">
+                    Current mode: Inquiry only. The assistant answers questions without changing data.
+                </p>
+                <p class="mt-1.5 text-[11px] text-zinc-400" x-show="$store.tasksApp.chatMode === 'crud'">
+                    Current mode: CRUD actions enabled as a UI placeholder for future backend integration.
+                </p>
+            </div>
+
             <div class="flex-1 overflow-y-auto px-4 py-4">
                 <div class="space-y-4">
                     <div class="flex justify-start">
@@ -276,6 +304,7 @@
                     toastTimeoutId: null,
                     editingTaskId: null,
                     isChatModalOpen: false,
+                    chatMode: 'inquiry',
                     form: {
                         title: '',
                         description: '',
@@ -393,6 +422,14 @@
 
                     closeChatModal() {
                         this.isChatModalOpen = false;
+                    },
+
+                    setChatMode(mode) {
+                        if (!['inquiry', 'crud'].includes(mode)) {
+                            return;
+                        }
+
+                        this.chatMode = mode;
                     },
 
                     setFilterStatus(val) {

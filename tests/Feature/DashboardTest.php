@@ -17,5 +17,7 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertSee('aria-label="Open chat"', false);
     $response->assertSee('AI Chat Assistant', false);
     $response->assertSee('AI Chatbot');
+    $response->assertSee('Inquiry Only');
+    $response->assertSee('CRUD Actions');
     $response->assertSee('aria-label="Close chat"', false);
 });
