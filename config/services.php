@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'ai_assistant' => [
+        'api_key' => env('LLM_API_KEY'),
+        'base_url' => env('LLM_BASE_URL', 'https://api.openai.com/v1'),
+        'model' => env('LLM_MODEL', 'gpt-4o-mini'),
+        'timeout' => (int) env('LLM_TIMEOUT_SECONDS', 20),
+    ],
+
 ];
